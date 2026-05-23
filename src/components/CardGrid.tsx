@@ -22,10 +22,11 @@ interface SortableCardProps {
   pokemon: DisplayPokemon;
   cardSize: number;
   crop: Crop;
+  cleanView: boolean;
   onArtClick: (dex: number) => void;
 }
 
-function SortableCard({ pokemon, cardSize, crop, onArtClick }: SortableCardProps) {
+function SortableCard({ pokemon, cardSize, crop, cleanView, onArtClick }: SortableCardProps) {
   const card = pokemon.cards.find((c) => c.id === pokemon.selectedCardId) ?? pokemon.cards[0];
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: String(pokemon.dexNumber) });
@@ -85,7 +86,7 @@ function SortableCard({ pokemon, cardSize, crop, onArtClick }: SortableCardProps
               />
             </div>
 
-            {hasMultiple && (
+            {hasMultiple && !cleanView && (
               <div
                 onClick={(e) => { e.stopPropagation(); onArtClick(pokemon.dexNumber); }}
                 title={`${pokemon.cards.length} arts available`}
@@ -108,24 +109,26 @@ function SortableCard({ pokemon, cardSize, crop, onArtClick }: SortableCardProps
               </div>
             )}
 
-            <div
-              style={{
-                position: 'absolute',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: 'linear-gradient(transparent, rgba(0,0,0,0.85))',
-                padding: '8px 4px 2px',
-                borderRadius: '0 0 3px 3px',
-                fontSize: Math.max(8, cardSize * 0.09),
-                color: '#eef',
-                textAlign: 'center',
-                lineHeight: 1.1,
-                pointerEvents: 'none',
-              }}
-            >
-              <span style={{ color: typeColor, fontWeight: 600 }}>#{pokemon.dexNumber}</span>
-            </div>
+            {!cleanView && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  background: 'linear-gradient(transparent, rgba(0,0,0,0.85))',
+                  padding: '8px 4px 2px',
+                  borderRadius: '0 0 3px 3px',
+                  fontSize: Math.max(8, cardSize * 0.09),
+                  color: '#eef',
+                  textAlign: 'center',
+                  lineHeight: 1.1,
+                  pointerEvents: 'none',
+                }}
+              >
+                <span style={{ color: typeColor, fontWeight: 600 }}>#{pokemon.dexNumber}</span>
+              </div>
+            )}
           </>
         ) : (
           <div style={{
@@ -148,6 +151,7 @@ interface Props {
   cardSize: number;
   crop: Crop;
   columns: number;
+  cleanView: boolean;
   onSelectArt: (dexNumber: number, cardId: string) => void;
   onReorder: (newList: DisplayPokemon[]) => void;
 }
@@ -158,6 +162,7 @@ export function CardGrid({
   cardSize,
   crop,
   columns,
+  cleanView,
   onSelectArt,
   onReorder,
 }: Props) {
@@ -220,6 +225,7 @@ export function CardGrid({
                 pokemon={pokemon}
                 cardSize={cardSize}
                 crop={crop}
+                cleanView={cleanView}
                 onArtClick={(dex) => setPickerDex(dex)}
               />
             ))}

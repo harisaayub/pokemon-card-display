@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import type { Crop } from '../types';
 import { CARD_WIDTH_MM, CARD_HEIGHT_MM } from '../types';
 
@@ -34,12 +34,12 @@ export function CropSettings({ crop, onChange, sampleCards }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const draggingEdge = useRef<Edge | null>(null);
 
-  const clampCrop = (next: Crop): Crop => ({
+  const clampCrop = useCallback((next: Crop): Crop => ({
     top:    Math.max(0, Math.min(next.top,    1 - MIN_VISIBLE - next.bottom)),
     bottom: Math.max(0, Math.min(next.bottom, 1 - MIN_VISIBLE - next.top)),
     left:   Math.max(0, Math.min(next.left,   1 - MIN_VISIBLE - next.right)),
     right:  Math.max(0, Math.min(next.right,  1 - MIN_VISIBLE - next.left)),
-  });
+  }), []);
 
   const applyEdge = (edge: Edge, frac: number) => {
     let next = { ...crop, [edge]: frac };
@@ -53,6 +53,78 @@ export function CropSettings({ crop, onChange, sampleCards }: Props) {
     }
     onChange(clampCrop(next));
   };
+
+  // Auto-detect white border by sampling pixels along each edge
+  const [detecting, setDetecting] = useState(false);
+  const detectBorder = useCallback(() => {
+    if (!sampleImageUrl) return;
+    setDetecting(true);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const W = img.naturalWidth, H = img.naturalHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const data = ctx.getImageData(0, 0, W, H).data;
+
+      const px = (x: number, y: number) => {
+        const i = (Math.round(y) * W + Math.round(x)) * 4;
+        return { r: data[i], g: data[i+1], b: data[i+2] };
+      };
+      // "border-like" = bright and low-saturation (white/cream/light grey)
+      const isBorder = (x: number, y: number) => {
+        const { r, g, b } = px(x, y);
+        const brightness = (r + g + b) / 3;
+        const saturation = Math.max(r, g, b) - Math.min(r, g, b);
+        return brightness > 200 && saturation < 40;
+      };
+      // Sample along the center column / row to find where border ends
+      const SAMPLES = 8; // sample at multiple horizontal/vertical positions
+      const findEdge = (axis: 'top' | 'bottom' | 'left' | 'right') => {
+        let best = 0;
+        for (let s = 0; s < SAMPLES; s++) {
+          const t = (s + 1) / (SAMPLES + 1);
+          let edge = 0;
+          if (axis === 'top') {
+            const x = W * t;
+            for (let y = 0; y < H * 0.5; y++) {
+              if (!isBorder(x, y)) { edge = Math.max(edge, y / H); break; }
+            }
+          } else if (axis === 'bottom') {
+            const x = W * t;
+            for (let y = H - 1; y > H * 0.5; y--) {
+              if (!isBorder(x, y)) { edge = Math.max(edge, (H - 1 - y) / H); break; }
+            }
+          } else if (axis === 'left') {
+            const y = H * t;
+            for (let x = 0; x < W * 0.5; x++) {
+              if (!isBorder(x, y)) { edge = Math.max(edge, x / W); break; }
+            }
+          } else {
+            const y = H * t;
+            for (let x = W - 1; x > W * 0.5; x--) {
+              if (!isBorder(x, y)) { edge = Math.max(edge, (W - 1 - x) / W); break; }
+            }
+          }
+          best = Math.max(best, edge);
+        }
+        return best;
+      };
+
+      const detected: Crop = {
+        top:    findEdge('top'),
+        bottom: findEdge('bottom'),
+        left:   findEdge('left'),
+        right:  findEdge('right'),
+      };
+      onChange(clampCrop(detected));
+      setDetecting(false);
+    };
+    img.onerror = () => setDetecting(false);
+    img.src = sampleImageUrl;
+  }, [sampleImageUrl, onChange, clampCrop]);
 
   // Pointer events for dragging crop handles on the card preview
   useEffect(() => {
@@ -104,6 +176,20 @@ export function CropSettings({ crop, onChange, sampleCards }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <SymCheck label="H sym" checked={symH} onChange={setSymH} title="Left = Right" />
           <SymCheck label="V sym" checked={symV} onChange={setSymV} title="Top = Bottom" />
+          {sampleImageUrl && (
+            <button
+              onClick={detectBorder}
+              disabled={detecting}
+              title="Auto-detect white card border from image"
+              style={{
+                background: 'transparent', border: '1px solid #556', borderRadius: 4,
+                color: detecting ? '#445' : '#7af', fontSize: 10, cursor: detecting ? 'wait' : 'pointer',
+                padding: '2px 6px',
+              }}
+            >
+              {detecting ? '…' : 'Detect'}
+            </button>
+          )}
           <button
             onClick={() => onChange({ top: 0, bottom: 0, left: 0, right: 0 })}
             style={{

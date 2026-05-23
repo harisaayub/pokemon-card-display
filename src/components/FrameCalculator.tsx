@@ -11,6 +11,7 @@ interface Props {
   onSettingsChange: (s: DisplaySettings) => void;
   resolvedColumns: number;
   resolvedRows: number;
+  imperial: boolean;
 }
 
 export function FrameCalculator({
@@ -22,6 +23,7 @@ export function FrameCalculator({
   onSettingsChange,
   resolvedColumns,
   resolvedRows,
+  imperial,
 }: Props) {
   const [fitW, setFitW] = useState(600);
   const [fitH, setFitH] = useState(400);
@@ -47,8 +49,12 @@ export function FrameCalculator({
   const fitRows = Math.max(1, Math.floor((fitH - 2 * borderMm + gapMm) / (cardH + gapMm)));
   const fitTotal = fitCols * fitRows;
 
-  const toInches = (mm: number) => (mm / 25.4).toFixed(2);
-  const toCm = (mm: number) => (mm / 10).toFixed(1);
+  const fmt = (mm: number) => imperial
+    ? `${(mm / 25.4).toFixed(2)}"`
+    : `${(mm / 10).toFixed(1)} cm`;
+  const fmtCard = (mm: number) => imperial
+    ? `${(mm / 25.4).toFixed(2)}"`
+    : `${(mm / 10).toFixed(1)} cm`;
 
   const fits = settings.columnsMode === 'fit-to-frame' ? columns * rows : null;
 
@@ -64,9 +70,9 @@ export function FrameCalculator({
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
           <span style={{ color: '#789' }}>Width</span>
-          <span style={{ color: '#eef' }}>{toCm(frameW)} cm / {toInches(frameW)}"</span>
+          <span style={{ color: '#eef' }}>{fmt(frameW)}</span>
           <span style={{ color: '#789' }}>Height</span>
-          <span style={{ color: '#eef' }}>{toCm(frameH)} cm / {toInches(frameH)}"</span>
+          <span style={{ color: '#eef' }}>{fmt(frameH)}</span>
           <span style={{ color: '#789' }}>Grid</span>
           <span style={{ color: '#eef' }}>{columns} × {rows}</span>
           {fits != null && (
@@ -79,7 +85,7 @@ export function FrameCalculator({
           )}
         </div>
         <div style={{ marginTop: 8, fontSize: 11, color: '#556', borderTop: '1px solid #334', paddingTop: 6 }}>
-          {toCm(cardW)}×{toCm(cardH)} cm card · {gapMm}mm gap · {borderMm}mm border
+          {fmtCard(cardW)} × {fmtCard(cardH)} card · {gapMm}mm gap · {borderMm}mm border
         </div>
       </div>
 
@@ -133,7 +139,7 @@ export function FrameCalculator({
                 onChange={(e) => onSettingsChange({ ...settings, targetWidthMm: Number(e.target.value) })}
                 style={numInputStyle}
               />
-              <span style={{ color: '#556', fontSize: 11 }}>{toCm(settings.targetWidthMm)} cm</span>
+              <span style={{ color: '#556', fontSize: 11 }}>{fmt(settings.targetWidthMm)}</span>
             </label>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ color: '#789', fontSize: 12, minWidth: 36 }}>H (mm)</span>
@@ -142,7 +148,7 @@ export function FrameCalculator({
                 onChange={(e) => onSettingsChange({ ...settings, targetHeightMm: Number(e.target.value) })}
                 style={numInputStyle}
               />
-              <span style={{ color: '#556', fontSize: 11 }}>{toCm(settings.targetHeightMm)} cm</span>
+              <span style={{ color: '#556', fontSize: 11 }}>{fmt(settings.targetHeightMm)}</span>
             </label>
           </div>
         )}
@@ -170,7 +176,7 @@ export function FrameCalculator({
               onChange={(e) => setFitW(Math.max(50, Number(e.target.value)))}
               style={numInputStyle}
             />
-            <span style={{ color: '#556', fontSize: 11 }}>{toCm(fitW)} cm</span>
+            <span style={{ color: '#556', fontSize: 11 }}>{fmt(fitW)}</span>
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ color: '#789', fontSize: 12, minWidth: 36 }}>H (mm)</span>
@@ -179,7 +185,7 @@ export function FrameCalculator({
               onChange={(e) => setFitH(Math.max(50, Number(e.target.value)))}
               style={numInputStyle}
             />
-            <span style={{ color: '#556', fontSize: 11 }}>{toCm(fitH)} cm</span>
+            <span style={{ color: '#556', fontSize: 11 }}>{fmt(fitH)}</span>
           </label>
         </div>
         <div style={{

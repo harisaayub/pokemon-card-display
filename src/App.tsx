@@ -35,6 +35,8 @@ export default function App() {
   const [artPref, setArtPref] = useState<ArtPreference>('latest');
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY);
   const [customOrder, setCustomOrder] = useState<Record<number, number[]>>({});
+  const [cleanView, setCleanView] = useState(false);
+  const [imperial, setImperial] = useState(false);
 
   const gen = GENERATIONS[genIndex];
 
@@ -233,6 +235,34 @@ export default function App() {
             </button>
           ))}
         </div>
+
+        {/* Clean view + units */}
+        <div style={{ display: 'flex', gap: 6, marginLeft: 4 }}>
+          <button
+            onClick={() => setCleanView(v => !v)}
+            title="Hide dex numbers and art count badges"
+            style={{
+              padding: '4px 10px', borderRadius: 6, border: '1px solid',
+              borderColor: cleanView ? '#7f7' : '#334',
+              cursor: 'pointer', fontSize: 11,
+              background: cleanView ? '#0d2010' : 'transparent',
+              color: cleanView ? '#7f7' : '#778',
+            }}
+          >
+            {cleanView ? 'Clean ✓' : 'Clean'}
+          </button>
+          <button
+            onClick={() => setImperial(v => !v)}
+            title="Toggle inches / cm"
+            style={{
+              padding: '4px 10px', borderRadius: 6, border: '1px solid',
+              borderColor: '#334', cursor: 'pointer', fontSize: 11,
+              background: 'transparent', color: '#778',
+            }}
+          >
+            {imperial ? 'in' : 'cm'}
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 20, padding: '16px 20px', alignItems: 'flex-start' }}>
@@ -262,6 +292,7 @@ export default function App() {
                   cardSize={cardSize}
                   crop={crop}
                   columns={resolvedColumns}
+                  cleanView={cleanView}
                   onSelectArt={handleSelectArt}
                   onReorder={handleReorder}
                 />
@@ -281,6 +312,7 @@ export default function App() {
             onSettingsChange={setDisplaySettings}
             resolvedColumns={resolvedColumns}
             resolvedRows={resolvedRows}
+            imperial={imperial}
           />
 
           {/* Gap + border settings */}
