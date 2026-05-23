@@ -32,7 +32,7 @@ export default function App() {
   const [gapMm, setGapMm] = useState(3);
   const [borderMm, setBorderMm] = useState(20);
   const [crop, setCrop] = useState<Crop>(DEFAULT_CROP);
-  const [artPref, setArtPref] = useState<ArtPreference>('latest');
+  const [artPref, setArtPref] = useState<ArtPreference>('earliest');
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY);
   const [customOrder, setCustomOrder] = useState<Record<number, number[]>>({});
   const [cleanView, setCleanView] = useState(false);
