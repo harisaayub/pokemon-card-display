@@ -14,7 +14,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Card, DisplayPokemon, SortMode, SelectedArts, Crop } from '../types';
+import type { DisplayPokemon, SortMode, Crop } from '../types';
 import { TYPE_COLORS, TYPE_HUE } from '../types';
 import { ArtPicker } from './ArtPicker';
 
@@ -144,7 +144,6 @@ function SortableCard({ pokemon, cardSize, crop, onArtClick }: SortableCardProps
 
 interface Props {
   pokemonList: DisplayPokemon[];
-  selectedArts: SelectedArts;
   sortMode: SortMode;
   cardSize: number;
   crop: Crop;
@@ -155,7 +154,6 @@ interface Props {
 
 export function CardGrid({
   pokemonList,
-  selectedArts,
   sortMode,
   cardSize,
   crop,

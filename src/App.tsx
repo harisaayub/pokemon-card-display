@@ -258,7 +258,6 @@ export default function App() {
               <div style={{ overflowX: 'auto' }}>
                 <CardGrid
                   pokemonList={pokemonList}
-                  selectedArts={selectedArts}
                   sortMode={sortMode}
                   cardSize={cardSize}
                   crop={crop}

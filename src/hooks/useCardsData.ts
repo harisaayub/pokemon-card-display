@@ -10,13 +10,13 @@ export function useCardsData(): State {
   const [state, setState] = useState<State>({ status: 'loading' });
 
   useEffect(() => {
-    fetch('/cards.json')
+    fetch(import.meta.env.BASE_URL + 'cards.json')
       .then(async (res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json() as Promise<CardsData>;
       })
       .then((data) => setState({ status: 'ok', data }))
-      .catch((err) =>
+      .catch(() =>
         setState({
           status: 'error',
           message:
