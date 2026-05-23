@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Crop, DisplaySettings } from '../types';
 import { CARD_WIDTH_MM, CARD_HEIGHT_MM } from '../types';
 
@@ -8,7 +9,6 @@ interface Props {
   borderMm: number;
   settings: DisplaySettings;
   onSettingsChange: (s: DisplaySettings) => void;
-  // resolved columns/rows from App (for auto mode)
   resolvedColumns: number;
   resolvedRows: number;
 }
@@ -23,6 +23,9 @@ export function FrameCalculator({
   resolvedColumns,
   resolvedRows,
 }: Props) {
+  const [fitW, setFitW] = useState(600);
+  const [fitH, setFitH] = useState(400);
+
   const cardW = CARD_WIDTH_MM * (1 - crop.left - crop.right);
   const cardH = CARD_HEIGHT_MM * (1 - crop.top - crop.bottom);
 
@@ -38,6 +41,11 @@ export function FrameCalculator({
 
   const frameW = columns * cardW + (columns - 1) * gapMm + 2 * borderMm;
   const frameH = rows * cardH + (rows - 1) * gapMm + 2 * borderMm;
+
+  // "How many fit" calculator (always visible, independent of layout mode)
+  const fitCols = Math.max(1, Math.floor((fitW - 2 * borderMm + gapMm) / (cardW + gapMm)));
+  const fitRows = Math.max(1, Math.floor((fitH - 2 * borderMm + gapMm) / (cardH + gapMm)));
+  const fitTotal = fitCols * fitRows;
 
   const toInches = (mm: number) => (mm / 25.4).toFixed(2);
   const toCm = (mm: number) => (mm / 10).toFixed(1);
@@ -84,7 +92,6 @@ export function FrameCalculator({
           Layout
         </div>
 
-        {/* Mode tabs */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
           {(['auto', 'manual', 'fit-to-frame'] as const).map((mode) => (
             <button
@@ -145,6 +152,57 @@ export function FrameCalculator({
             Auto-calculates nearest square grid for {pokemonCount} Pokémon
           </div>
         )}
+      </div>
+
+      {/* How many fit calculator */}
+      <div style={{
+        background: '#1a1a2e', border: '1px solid #334', borderRadius: 8,
+        padding: '12px 16px', fontSize: 13, color: '#aab',
+      }}>
+        <div style={{ fontWeight: 600, color: '#ccd', marginBottom: 10, fontSize: 14 }}>
+          How many fit?
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: '#789', fontSize: 12, minWidth: 36 }}>W (mm)</span>
+            <input
+              type="number" min={50} max={5000} value={fitW}
+              onChange={(e) => setFitW(Math.max(50, Number(e.target.value)))}
+              style={numInputStyle}
+            />
+            <span style={{ color: '#556', fontSize: 11 }}>{toCm(fitW)} cm</span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: '#789', fontSize: 12, minWidth: 36 }}>H (mm)</span>
+            <input
+              type="number" min={50} max={5000} value={fitH}
+              onChange={(e) => setFitH(Math.max(50, Number(e.target.value)))}
+              style={numInputStyle}
+            />
+            <span style={{ color: '#556', fontSize: 11 }}>{toCm(fitH)} cm</span>
+          </label>
+        </div>
+        <div style={{
+          background: '#0d0d1a', borderRadius: 6, padding: '8px 10px',
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3px 12px',
+        }}>
+          <span style={{ color: '#789', fontSize: 11 }}>Columns</span>
+          <span style={{ color: '#eef', fontSize: 11, fontFamily: 'monospace' }}>{fitCols}</span>
+          <span style={{ color: '#789', fontSize: 11 }}>Rows</span>
+          <span style={{ color: '#eef', fontSize: 11, fontFamily: 'monospace' }}>{fitRows}</span>
+          <span style={{ color: '#789', fontSize: 11 }}>Max cards</span>
+          <span style={{
+            fontSize: 13, fontWeight: 700, fontFamily: 'monospace',
+            color: fitTotal >= pokemonCount ? '#7f7' : '#fa7',
+          }}>
+            {fitTotal}
+            {fitTotal < pokemonCount && (
+              <span style={{ fontSize: 10, fontWeight: 400, color: '#fa7', marginLeft: 4 }}>
+                ({pokemonCount - fitTotal} won't fit)
+              </span>
+            )}
+          </span>
+        </div>
       </div>
     </div>
   );

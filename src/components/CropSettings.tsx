@@ -2,10 +2,15 @@ import { useRef, useEffect, useState } from 'react';
 import type { Crop } from '../types';
 import { CARD_WIDTH_MM, CARD_HEIGHT_MM } from '../types';
 
+export interface SampleCard {
+  label: string;
+  imageUrl: string;
+}
+
 interface Props {
   crop: Crop;
   onChange: (c: Crop) => void;
-  sampleImageUrl?: string;
+  sampleCards?: SampleCard[];
 }
 
 const CARD_W = 176;
@@ -15,9 +20,16 @@ const MIN_VISIBLE = 0.05;
 
 type Edge = keyof Crop;
 
-export function CropSettings({ crop, onChange, sampleImageUrl }: Props) {
+export function CropSettings({ crop, onChange, sampleCards }: Props) {
   const [symH, setSymH] = useState(false); // left = right
   const [symV, setSymV] = useState(false); // top = bottom
+  const [sampleIdx, setSampleIdx] = useState(0);
+
+  const clampedIdx = sampleCards && sampleCards.length > 0
+    ? Math.min(sampleIdx, sampleCards.length - 1)
+    : 0;
+  const sampleImageUrl = sampleCards?.[clampedIdx]?.imageUrl;
+  const sampleLabel = sampleCards?.[clampedIdx]?.label ?? '';
 
   const containerRef = useRef<HTMLDivElement>(null);
   const draggingEdge = useRef<Edge | null>(null);
@@ -103,6 +115,26 @@ export function CropSettings({ crop, onChange, sampleImageUrl }: Props) {
           </button>
         </div>
       </div>
+
+      {/* Card navigation */}
+      {sampleCards && sampleCards.length > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, minWidth: 0 }}>
+          <button
+            onClick={() => setSampleIdx((i) => (i - 1 + sampleCards.length) % sampleCards.length)}
+            style={navBtnStyle}
+          >‹</button>
+          <span style={{
+            flex: 1, fontSize: 11, color: '#889', textAlign: 'center',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {sampleLabel}
+          </span>
+          <button
+            onClick={() => setSampleIdx((i) => (i + 1) % sampleCards.length)}
+            style={navBtnStyle}
+          >›</button>
+        </div>
+      )}
 
       {/* Interactive card preview */}
       <div
@@ -214,6 +246,18 @@ export function CropSettings({ crop, onChange, sampleImageUrl }: Props) {
     </div>
   );
 }
+
+const navBtnStyle: React.CSSProperties = {
+  background: 'transparent',
+  border: '1px solid #334',
+  borderRadius: 4,
+  color: '#7af',
+  fontSize: 16,
+  cursor: 'pointer',
+  padding: '0 6px',
+  lineHeight: 1.4,
+  flexShrink: 0,
+};
 
 function Handle({
   style,

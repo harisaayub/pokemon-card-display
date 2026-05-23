@@ -148,6 +148,7 @@ interface Props {
   sortMode: SortMode;
   cardSize: number;
   crop: Crop;
+  columns: number;
   onSelectArt: (dexNumber: number, cardId: string) => void;
   onReorder: (newList: DisplayPokemon[]) => void;
 }
@@ -158,6 +159,7 @@ export function CardGrid({
   sortMode,
   cardSize,
   crop,
+  columns,
   onSelectArt,
   onReorder,
 }: Props) {
@@ -213,7 +215,7 @@ export function CardGrid({
           items={sortedList.map((p) => String(p.dexNumber))}
           strategy={rectSortingStrategy}
         >
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, max-content)`, gap: 4 }}>
             {sortedList.map((pokemon) => (
               <SortableCard
                 key={pokemon.dexNumber}

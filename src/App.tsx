@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useCardsData } from './hooks/useCardsData';
 import { CardGrid } from './components/CardGrid';
 import { FrameCalculator } from './components/FrameCalculator';
-import { CropSettings } from './components/CropSettings';
+import { CropSettings, type SampleCard } from './components/CropSettings';
 import { ArtPreferencePanel } from './components/ArtPreference';
 import type { SortMode, SelectedArts, DisplayPokemon, Crop, ArtPreference, DisplaySettings } from './types';
 import { GENERATIONS } from './types';
@@ -81,12 +81,13 @@ export default function App() {
 
   const resolvedRows = Math.ceil(pokemonList.length / resolvedColumns);
 
-  const sampleImageUrl = useMemo(() => {
-    const first = pokemonList[0];
-    if (!first) return undefined;
-    const card = first.cards.find((c) => c.id === first.selectedCardId) ?? first.cards[0];
-    return card?.imageSmall;
-  }, [pokemonList]);
+  const sampleCards = useMemo((): SampleCard[] =>
+    pokemonList.map((p) => {
+      const card = p.cards.find((c) => c.id === p.selectedCardId) ?? p.cards[0];
+      return { label: `#${p.dexNumber} ${card?.name ?? ''}`, imageUrl: card?.imageSmall ?? '' };
+    }),
+    [pokemonList],
+  );
 
   const handleSelectArt = useCallback((dexNumber: number, cardId: string) => {
     setSelectedArts((prev) => ({ ...prev, [dexNumber]: cardId }));
@@ -254,15 +255,18 @@ export default function App() {
               <div style={{ color: '#556', fontSize: 12, marginBottom: 8 }}>
                 {gen.label} · {pokemonList.length} Pokémon · drag to rearrange · click badge to change art
               </div>
-              <CardGrid
-                pokemonList={pokemonList}
-                selectedArts={selectedArts}
-                sortMode={sortMode}
-                cardSize={cardSize}
-                crop={crop}
-                onSelectArt={handleSelectArt}
-                onReorder={handleReorder}
-              />
+              <div style={{ overflowX: 'auto' }}>
+                <CardGrid
+                  pokemonList={pokemonList}
+                  selectedArts={selectedArts}
+                  sortMode={sortMode}
+                  cardSize={cardSize}
+                  crop={crop}
+                  columns={resolvedColumns}
+                  onSelectArt={handleSelectArt}
+                  onReorder={handleReorder}
+                />
+              </div>
             </>
           )}
         </div>
@@ -292,7 +296,7 @@ export default function App() {
             <Slider label="Border (mm)" value={borderMm} min={0} max={100} onChange={setBorderMm} />
           </div>
 
-          <CropSettings crop={crop} onChange={setCrop} sampleImageUrl={sampleImageUrl} />
+          <CropSettings crop={crop} onChange={setCrop} sampleCards={sampleCards} />
 
           <ArtPreferencePanel
             preference={artPref}
