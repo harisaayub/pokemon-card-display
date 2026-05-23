@@ -15,8 +15,9 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { DisplayPokemon, SortMode, Crop } from '../types';
-import { TYPE_COLORS, TYPE_HUE } from '../types';
+import { TYPE_COLORS } from '../types';
 import { ArtPicker } from './ArtPicker';
+import { getAverageColor, rgbToHsl } from '../utils/colorExtract';
 
 interface SortableCardProps {
   pokemon: DisplayPokemon;
@@ -182,17 +183,22 @@ export function CardGrid({
         return a.dexNumber - b.dexNumber;
       }));
     } else if (sortMode === 'color') {
-      // Sort by type hue — reliable without CORS canvas extraction
-      setSortedList([...pokemonList].sort((a, b) => {
-        const ta = a.cards.find((c) => c.id === a.selectedCardId)?.types?.[0] ?? '';
-        const tb = b.cards.find((c) => c.id === b.selectedCardId)?.types?.[0] ?? '';
-        const ha = TYPE_HUE[ta] ?? 0;
-        const hb = TYPE_HUE[tb] ?? 0;
-        if (ha !== hb) return ha - hb;
-        return a.dexNumber - b.dexNumber;
-      }));
+      Promise.all(
+        pokemonList.map(async (p) => {
+          const card = p.cards.find((c) => c.id === p.selectedCardId) ?? p.cards[0];
+          const rgb = await getAverageColor(card?.imageSmall ?? '', crop);
+          return { pokemon: p, hsl: rgbToHsl(...rgb) };
+        }),
+      ).then((items) => {
+        items.sort((a, b) => {
+          const dh = a.hsl[0] - b.hsl[0];
+          if (Math.abs(dh) > 0.015) return dh;
+          return b.hsl[1] - a.hsl[1]; // tie-break by saturation
+        });
+        setSortedList(items.map((i) => i.pokemon));
+      });
     }
-  }, [sortMode, pokemonList]);
+  }, [sortMode, pokemonList, crop]);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
