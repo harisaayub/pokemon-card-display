@@ -24,10 +24,11 @@ interface SortableCardProps {
   cardSize: number;
   crop: Crop;
   cleanView: boolean;
+  collected: boolean;
   onArtClick: (dex: number) => void;
 }
 
-function SortableCard({ pokemon, cardSize, crop, cleanView, onArtClick }: SortableCardProps) {
+function SortableCard({ pokemon, cardSize, crop, cleanView, collected, onArtClick }: SortableCardProps) {
   const card = pokemon.cards.find((c) => c.id === pokemon.selectedCardId) ?? pokemon.cards[0];
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: String(pokemon.dexNumber) });
@@ -86,6 +87,22 @@ function SortableCard({ pokemon, cardSize, crop, cleanView, onArtClick }: Sortab
                 draggable={false}
               />
             </div>
+
+            {collected && (
+              <div style={{
+                position: 'absolute',
+                top: 3,
+                left: 3,
+                background: 'rgba(0,180,80,0.85)',
+                color: '#fff',
+                fontSize: 8,
+                borderRadius: 3,
+                padding: '1px 3px',
+                fontWeight: 700,
+                pointerEvents: 'none',
+                lineHeight: 1.3,
+              }}>✓</div>
+            )}
 
             {hasMultiple && !cleanView && (
               <div
@@ -153,6 +170,7 @@ interface Props {
   crop: Crop;
   columns: number;
   cleanView: boolean;
+  collected: Set<number>;
   onSelectArt: (dexNumber: number, cardId: string) => void;
   onReorder: (newList: DisplayPokemon[]) => void;
 }
@@ -164,6 +182,7 @@ export function CardGrid({
   crop,
   columns,
   cleanView,
+  collected,
   onSelectArt,
   onReorder,
 }: Props) {
@@ -232,6 +251,7 @@ export function CardGrid({
                 cardSize={cardSize}
                 crop={crop}
                 cleanView={cleanView}
+                collected={collected.has(pokemon.dexNumber)}
                 onArtClick={(dex) => setPickerDex(dex)}
               />
             ))}

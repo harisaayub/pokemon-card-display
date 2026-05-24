@@ -48,6 +48,13 @@ export interface DisplayPokemon {
   selectedCardId: string;
 }
 
+export interface Display {
+  id: string;
+  label: string;
+  min: number;
+  max: number;
+}
+
 export const GENERATIONS: { label: string; min: number; max: number }[] = [
   { label: 'Gen I', min: 1, max: 151 },
   { label: 'Gen II', min: 152, max: 251 },

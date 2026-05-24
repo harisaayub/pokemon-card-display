@@ -1,10 +1,12 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useCardsData } from './hooks/useCardsData';
 import { CardGrid } from './components/CardGrid';
 import { FrameCalculator } from './components/FrameCalculator';
 import { CropSettings, type SampleCard } from './components/CropSettings';
 import { ArtPreferencePanel } from './components/ArtPreference';
-import type { SortMode, SelectedArts, DisplayPokemon, Crop, ArtPreference, DisplaySettings } from './types';
+import { CollectionPanel } from './components/CollectionPanel';
+import { DisplayEditor } from './components/DisplayEditor';
+import type { SortMode, SelectedArts, DisplayPokemon, Crop, ArtPreference, DisplaySettings, Display } from './types';
 import { GENERATIONS } from './types';
 
 const CARD_SIZES = [
@@ -23,9 +25,32 @@ const DEFAULT_DISPLAY: DisplaySettings = {
   targetHeightMm: 400,
 };
 
+const DEFAULT_DISPLAYS: Display[] = GENERATIONS.map((g, i) => ({
+  id: `gen-${i}`,
+  label: g.label,
+  min: g.min,
+  max: g.max,
+}));
+
+function loadDisplays(): Display[] {
+  try {
+    const raw = localStorage.getItem('pokemon-displays');
+    return raw ? JSON.parse(raw) : DEFAULT_DISPLAYS;
+  } catch { return DEFAULT_DISPLAYS; }
+}
+
+function loadCollected(): Set<number> {
+  try {
+    const raw = localStorage.getItem('pokemon-collected');
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch { return new Set(); }
+}
+
 export default function App() {
   const state = useCardsData();
-  const [genIndex, setGenIndex] = useState(0);
+  const [displays, setDisplays] = useState<Display[]>(loadDisplays);
+  const [displayIndex, setDisplayIndex] = useState(0);
+  const [showDisplayEditor, setShowDisplayEditor] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>('dex');
   const [selectedArts, setSelectedArts] = useState<SelectedArts>({});
   const [cardSize, setCardSize] = useState(80);
@@ -34,24 +59,34 @@ export default function App() {
   const [crop, setCrop] = useState<Crop>(DEFAULT_CROP);
   const [artPref, setArtPref] = useState<ArtPreference>('earliest');
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY);
-  const [customOrder, setCustomOrder] = useState<Record<number, number[]>>({});
+  const [customOrder, setCustomOrder] = useState<Record<string, number[]>>({});
   const [cleanView, setCleanView] = useState(false);
   const [imperial, setImperial] = useState(false);
+  const [collected, setCollected] = useState<Set<number>>(loadCollected);
 
-  const gen = GENERATIONS[genIndex];
+  // Persist displays and collected to localStorage
+  useEffect(() => {
+    localStorage.setItem('pokemon-displays', JSON.stringify(displays));
+  }, [displays]);
+  useEffect(() => {
+    localStorage.setItem('pokemon-collected', JSON.stringify([...collected]));
+  }, [collected]);
+
+  const safeDisplayIndex = Math.min(displayIndex, displays.length - 1);
+  const activeDisplay = displays[safeDisplayIndex] ?? displays[0];
 
   const pokemonList = useMemo((): DisplayPokemon[] => {
     if (state.status !== 'ok') return [];
     const { byDex } = state.data;
 
     const dexNumbers: number[] = [];
-    for (let n = gen.min; n <= gen.max; n++) {
+    for (let n = activeDisplay.min; n <= activeDisplay.max; n++) {
       if (byDex[n]) dexNumbers.push(n);
     }
 
     const ordered =
-      customOrder[genIndex] && customOrder[genIndex].length === dexNumbers.length
-        ? customOrder[genIndex]
+      customOrder[activeDisplay.id] && customOrder[activeDisplay.id].length === dexNumbers.length
+        ? customOrder[activeDisplay.id]
         : dexNumbers;
 
     return ordered.map((dex) => {
@@ -59,7 +94,7 @@ export default function App() {
       const selectedId = selectedArts[dex] ?? cards[0]?.id ?? '';
       return { dexNumber: dex, cards, selectedCardId: selectedId };
     });
-  }, [state, gen, selectedArts, customOrder, genIndex]);
+  }, [state, activeDisplay, selectedArts, customOrder]);
 
   // Auto column count for 'auto' mode
   const autoColumns = useMemo(() => {
@@ -95,11 +130,19 @@ export default function App() {
     setSelectedArts((prev) => ({ ...prev, [dexNumber]: cardId }));
   }, []);
 
+  const handleToggleCollected = useCallback((dex: number) => {
+    setCollected((prev) => {
+      const next = new Set(prev);
+      if (next.has(dex)) next.delete(dex); else next.add(dex);
+      return next;
+    });
+  }, []);
+
   const handleReorder = useCallback(
     (newList: DisplayPokemon[]) => {
-      setCustomOrder((prev) => ({ ...prev, [genIndex]: newList.map((p) => p.dexNumber) }));
+      setCustomOrder((prev) => ({ ...prev, [activeDisplay.id]: newList.map((p) => p.dexNumber) }));
     },
-    [genIndex],
+    [activeDisplay.id],
   );
 
   const handleApplyArtPref = useCallback(
@@ -119,8 +162,8 @@ export default function App() {
 
       const ranges =
         scope === 'generation'
-          ? [gen]
-          : GENERATIONS;
+          ? [activeDisplay]
+          : displays;
 
       setSelectedArts((prev) => {
         const next = { ...prev };
@@ -133,7 +176,7 @@ export default function App() {
         return next;
       });
     },
-    [state, gen, artPref],
+    [state, activeDisplay, displays, artPref],
   );
 
   return (
@@ -150,19 +193,27 @@ export default function App() {
           Pokémon Card Display
         </span>
 
-        {/* Generation tabs */}
-        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-          {GENERATIONS.map((g, i) => (
-            <button key={i} onClick={() => setGenIndex(i)} style={{
+        {/* Display tabs */}
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', alignItems: 'center' }}>
+          {displays.map((d, i) => (
+            <button key={d.id} onClick={() => setDisplayIndex(i)} style={{
               padding: '4px 10px', borderRadius: 6, border: 'none',
               cursor: 'pointer', fontSize: 12, fontWeight: 600,
-              background: i === genIndex ? '#5577ff' : '#1a1a30',
-              color: i === genIndex ? '#fff' : '#889',
+              background: i === safeDisplayIndex ? '#5577ff' : '#1a1a30',
+              color: i === safeDisplayIndex ? '#fff' : '#889',
               transition: 'all 0.15s',
             }}>
-              {g.label}
+              {d.label}
             </button>
           ))}
+          <button
+            onClick={() => setShowDisplayEditor(true)}
+            title="Edit displays"
+            style={{
+              padding: '4px 8px', borderRadius: 6, border: '1px solid #334',
+              cursor: 'pointer', fontSize: 11, background: 'transparent', color: '#556',
+            }}
+          >✎</button>
         </div>
 
         {/* Grid columns control */}
@@ -283,7 +334,7 @@ export default function App() {
           {state.status === 'ok' && (
             <>
               <div style={{ color: '#556', fontSize: 12, marginBottom: 8 }}>
-                {gen.label} · {pokemonList.length} Pokémon · drag to rearrange · click badge to change art
+                {activeDisplay.label} · #{activeDisplay.min}–#{activeDisplay.max} · {pokemonList.length} Pokémon · drag to rearrange
               </div>
               <div style={{ overflowX: 'auto' }}>
                 <CardGrid
@@ -293,6 +344,7 @@ export default function App() {
                   crop={crop}
                   columns={resolvedColumns}
                   cleanView={cleanView}
+                  collected={collected}
                   onSelectArt={handleSelectArt}
                   onReorder={handleReorder}
                 />
@@ -336,6 +388,16 @@ export default function App() {
           />
 
           {state.status === 'ok' && (
+            <CollectionPanel
+              pokemonInDisplay={pokemonList}
+              byDex={state.data.byDex}
+              collected={collected}
+              onToggle={handleToggleCollected}
+              onClear={() => setCollected(new Set())}
+            />
+          )}
+
+          {state.status === 'ok' && (
             <div style={{
               background: '#1a1a2e', border: '1px solid #334', borderRadius: 8,
               padding: '10px 14px', fontSize: 11, color: '#445',
@@ -345,6 +407,17 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {showDisplayEditor && (
+        <DisplayEditor
+          displays={displays}
+          onChange={(next) => {
+            setDisplays(next);
+            setDisplayIndex((i) => Math.min(i, next.length - 1));
+          }}
+          onClose={() => setShowDisplayEditor(false)}
+        />
+      )}
     </div>
   );
 }
