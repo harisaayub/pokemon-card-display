@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import { useCardsData } from './hooks/useCardsData';
 import { CardGrid } from './components/CardGrid';
 import { FrameCalculator } from './components/FrameCalculator';
@@ -32,45 +33,25 @@ const DEFAULT_DISPLAYS: Display[] = GENERATIONS.map((g, i) => ({
   max: g.max,
 }));
 
-function loadDisplays(): Display[] {
-  try {
-    const raw = localStorage.getItem('pokemon-displays');
-    return raw ? JSON.parse(raw) : DEFAULT_DISPLAYS;
-  } catch { return DEFAULT_DISPLAYS; }
-}
-
-function loadCollected(): Set<number> {
-  try {
-    const raw = localStorage.getItem('pokemon-collected');
-    return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch { return new Set(); }
-}
 
 export default function App() {
   const state = useCardsData();
-  const [displays, setDisplays] = useState<Display[]>(loadDisplays);
-  const [displayIndex, setDisplayIndex] = useState(0);
+  const [displays, setDisplays] = useLocalStorage<Display[]>('pk-displays', DEFAULT_DISPLAYS);
+  const [displayIndex, setDisplayIndex] = useLocalStorage<number>('pk-displayIndex', 0);
   const [showDisplayEditor, setShowDisplayEditor] = useState(false);
-  const [sortMode, setSortMode] = useState<SortMode>('dex');
-  const [selectedArts, setSelectedArts] = useState<SelectedArts>({});
-  const [cardSize, setCardSize] = useState(80);
-  const [gapMm, setGapMm] = useState(3);
-  const [borderMm, setBorderMm] = useState(20);
-  const [crop, setCrop] = useState<Crop>(DEFAULT_CROP);
-  const [artPref, setArtPref] = useState<ArtPreference>('earliest');
-  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(DEFAULT_DISPLAY);
-  const [customOrder, setCustomOrder] = useState<Record<string, number[]>>({});
-  const [cleanView, setCleanView] = useState(false);
-  const [imperial, setImperial] = useState(false);
-  const [collected, setCollected] = useState<Set<number>>(loadCollected);
-
-  // Persist displays and collected to localStorage
-  useEffect(() => {
-    localStorage.setItem('pokemon-displays', JSON.stringify(displays));
-  }, [displays]);
-  useEffect(() => {
-    localStorage.setItem('pokemon-collected', JSON.stringify([...collected]));
-  }, [collected]);
+  const [sortMode, setSortMode] = useLocalStorage<SortMode>('pk-sortMode', 'dex');
+  const [selectedArts, setSelectedArts] = useLocalStorage<SelectedArts>('pk-selectedArts', {});
+  const [cardSize, setCardSize] = useLocalStorage<number>('pk-cardSize', 80);
+  const [gapMm, setGapMm] = useLocalStorage<number>('pk-gapMm', 3);
+  const [borderMm, setBorderMm] = useLocalStorage<number>('pk-borderMm', 20);
+  const [crop, setCrop] = useLocalStorage<Crop>('pk-crop', DEFAULT_CROP);
+  const [artPref, setArtPref] = useLocalStorage<ArtPreference>('pk-artPref', 'earliest');
+  const [displaySettings, setDisplaySettings] = useLocalStorage<DisplaySettings>('pk-displaySettings', DEFAULT_DISPLAY);
+  const [customOrder, setCustomOrder] = useLocalStorage<Record<string, number[]>>('pk-customOrder', {});
+  const [cleanView, setCleanView] = useLocalStorage<boolean>('pk-cleanView', false);
+  const [imperial, setImperial] = useLocalStorage<boolean>('pk-imperial', false);
+  const [collectedArr, setCollectedArr] = useLocalStorage<number[]>('pk-collected', []);
+  const collected = useMemo(() => new Set(collectedArr), [collectedArr]);
 
   const safeDisplayIndex = Math.min(displayIndex, displays.length - 1);
   const activeDisplay = displays[safeDisplayIndex] ?? displays[0];
@@ -131,12 +112,10 @@ export default function App() {
   }, []);
 
   const handleToggleCollected = useCallback((dex: number) => {
-    setCollected((prev) => {
-      const next = new Set(prev);
-      if (next.has(dex)) next.delete(dex); else next.add(dex);
-      return next;
-    });
-  }, []);
+    setCollectedArr((prev) =>
+      prev.includes(dex) ? prev.filter((d) => d !== dex) : [...prev, dex],
+    );
+  }, [setCollectedArr]);
 
   const handleReorder = useCallback(
     (newList: DisplayPokemon[]) => {
@@ -393,7 +372,7 @@ export default function App() {
               byDex={state.data.byDex}
               collected={collected}
               onToggle={handleToggleCollected}
-              onClear={() => setCollected(new Set())}
+              onClear={() => setCollectedArr([])}
             />
           )}
 
