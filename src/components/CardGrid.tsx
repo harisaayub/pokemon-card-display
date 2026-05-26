@@ -89,7 +89,8 @@ interface SortableCardProps {
   crop: Crop;
   cleanView: boolean;
   collected: boolean;
-  island: IslandInfo | null;
+  // undefined = islands mode off; null = mode on but uncollected; IslandInfo = in an island
+  island: IslandInfo | null | undefined;
   onArtClick: (dex: number) => void;
 }
 
@@ -118,11 +119,14 @@ function SortableCard({ pokemon, cardSize, crop, cleanView, collected, island, o
   const imgLeft = -Math.round(crop.left * cardSize);
   const imgTop = -Math.round(crop.top * naturalH);
 
-  // In island mode: dim cards that aren't collected
-  const dimmed = island === null && !collected ? false : (island !== null && !island) ? true : false;
-  // If islands mode is active (island prop could be null meaning "no island for this card")
-  // We detect islands mode by whether the parent passed a non-undefined island value
-  // — handled via the showIslands prop flow: always pass IslandInfo|null when on
+  // island === undefined → mode off (full opacity)
+  // island === null     → mode on, not collected → heavy dim
+  // island = IslandInfo → mode on, in island → fade with rank (1 = brightest)
+  const imgOpacity = island === undefined
+    ? 1
+    : island === null
+      ? 0.18
+      : Math.max(0.5, 1 - (island.rank - 1) * 0.1);
 
   const borderColor = island ? island.color : '#334';
   const borderWidth = island ? 2 : 1.5;
@@ -155,7 +159,7 @@ function SortableCard({ pokemon, cardSize, crop, cleanView, collected, island, o
                   left: imgLeft,
                   top: imgTop,
                   display: 'block',
-                  opacity: dimmed ? 0.35 : 1,
+                  opacity: imgOpacity,
                 }}
                 loading="lazy"
                 draggable={false}
@@ -352,7 +356,7 @@ export function CardGrid({
                 crop={crop}
                 cleanView={cleanView}
                 collected={collected.has(pokemon.dexNumber)}
-                island={islandMap ? (islandMap.get(pokemon.dexNumber) ?? null) : null}
+                island={islandMap ? (islandMap.get(pokemon.dexNumber) ?? null) : undefined}
                 onArtClick={(dex) => setPickerDex(dex)}
               />
             ))}
