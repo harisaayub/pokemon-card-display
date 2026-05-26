@@ -50,6 +50,7 @@ export default function App() {
   const [customOrder, setCustomOrder] = useLocalStorage<Record<string, number[]>>('pk-customOrder', {});
   const [cleanView, setCleanView] = useLocalStorage<boolean>('pk-cleanView', false);
   const [imperial, setImperial] = useLocalStorage<boolean>('pk-imperial', false);
+  const [showIslands, setShowIslands] = useLocalStorage<boolean>('pk-showIslands', false);
   const [collectedArr, setCollectedArr] = useLocalStorage<number[]>('pk-collected', []);
   const collected = useMemo(() => new Set(collectedArr), [collectedArr]);
 
@@ -282,6 +283,19 @@ export default function App() {
             {cleanView ? 'Clean ✓' : 'Clean'}
           </button>
           <button
+            onClick={() => setShowIslands(v => !v)}
+            title="Highlight connected groups of collected cards"
+            style={{
+              padding: '4px 10px', borderRadius: 6, border: '1px solid',
+              borderColor: showIslands ? '#fa7' : '#334',
+              cursor: 'pointer', fontSize: 11,
+              background: showIslands ? '#2a1a00' : 'transparent',
+              color: showIslands ? '#fa7' : '#778',
+            }}
+          >
+            {showIslands ? 'Islands ✓' : 'Islands'}
+          </button>
+          <button
             onClick={() => setImperial(v => !v)}
             title="Toggle inches / cm"
             style={{
@@ -323,6 +337,7 @@ export default function App() {
                   crop={crop}
                   columns={resolvedColumns}
                   cleanView={cleanView}
+                  showIslands={showIslands}
                   collected={collected}
                   onSelectArt={handleSelectArt}
                   onReorder={handleReorder}
